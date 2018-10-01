@@ -1,13 +1,21 @@
 <template>
-  <div style="height: 100%;">
-    <div :class="$style.changeTheme">
-      切换主题：
+  <div :class="$style.editorBox">
+    <div :class="$style.changeTheme" v-if="!readOnly">
+      <span :class="$style.title">{{title}}</span> 切换主题：
       <select v-model="currentTheme">
         <option
           v-for="(theme, index) of themes"
           :key="index"
           :value="theme"
         >{{theme}}</option>
+      </select>
+      切换语言：
+      <select v-model="currentMode">
+        <option
+          v-for="(mode, index) of modes"
+          :key="index"
+          :value="mode"
+        >{{mode}}</option>
       </select>
     </div>
     <textarea ref="editor"></textarea>
@@ -19,6 +27,7 @@ import CodeMirror from 'codemirror'
 import 'codemirror/lib/codemirror.css'
 import 'codemirror/mode/vue/vue'
 import themes from './themes'
+import modes from './modes'
 import { debounce } from 'throttle-debounce'
 
 export default {
@@ -30,15 +39,28 @@ export default {
     theme: {
       type: String,
       default: '3024-day'
+    },
+    title: {
+      type: String,
+      default: ''
+    },
+    mode: {
+      type: String,
+      default: 'vue'
     }
   },
   data: (vm) => ({
     currentTheme: vm.theme,
-    themes
+    currentMode: vm.mode,
+    themes,
+    modes
   }),
   methods: {
     loadTheme (theme) {
       import(`codemirror/theme/${theme}.css`)
+    },
+    loadMode (mode) {
+      return import(`codemirror/mode/${mode}/${mode}`)
     },
     setValue (code) {
       this.editorIns.setValue(code)
@@ -46,15 +68,20 @@ export default {
   },
   watch: {
     currentTheme (theme) {
-      this.editorIns.setOption('theme', theme)
       this.loadTheme(theme)
+      this.editorIns.setOption('theme', theme)
+    },
+    async currentMode (mode) {
+      await this.loadMode(mode)
+      this.editorIns.setOption('mode', mode)
     }
   },
-  mounted () {
+  async mounted () {
     this.loadTheme(this.currentTheme)
+    await this.loadMode(this.currentMode)
     this.editorIns = CodeMirror.fromTextArea(this.$refs.editor, {
-      value: '<div>asdf</div>',
-      mode: 'vue',
+      value: '',
+      mode: this.currentMode,
       theme: this.currentTheme,
       lineNumbers: true,
       styleActiveLine: true,
@@ -74,7 +101,18 @@ export default {
 }
 </script>
 
+<style lang="stylus">
+.CodeMirror
+  flex 1
+</style>
 <style lang="stylus" module>
+.editor-box
+  display flex
+  flex-direction column
+  height 100%
+.title
+  font-weight bold
+  color green
 .change-theme
-  margin-bottom 20px
+  margin 10px 0
 </style>
